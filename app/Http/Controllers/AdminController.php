@@ -56,28 +56,51 @@ class AdminController extends Controller
 
     public function updateProduct($id, Request $request)
     {
+        //Update ProductColor table
         $data = $request->all();
-        $data['updated_at'] = Carbon::now();
 
         $this->repository->edit($data, $id);
 
-        $images = $request->images;
-        if ($images) {
-            ProductImage::where('product_id', $id)->delete();
-            foreach ($images as $image) {
-                $path = time() . '-' . $image->getClientOriginalName();
-                ProductImage::insert([
-                    'path' => 'images/' . $path,
+        //Insert ProductColor table
+        $colors = json_decode($request->colors);
+        if ($colors) {
+            ProductColor::where('product_id', $id)->delete();
+            foreach ($colors as $color) {
+                ProductColor::insert([
                     'product_id' => $id,
-                    'created_at' => now(),
-                    'updated_at' => now(),
+                    'color_id' => $color->id,
+                    'quantity' => $color->quantity,
                 ]);
+            }
 
-                $image->storeAs('public/images', $path);
+            //Insert ProductImage table
+            $images = $request->images;
+            $preImages = json_decode($request->preImages);
+            if ($images || $preImages) {
+                ProductImage::where('product_id', $id)->delete();
+                if ($images) {
+                    foreach ($images as $image) {
+                        $path = time() . '-' . $image->getClientOriginalName();
+                        ProductImage::insert([
+                            'product_id' => $id,
+                            'path' => 'images/' . $path
+                        ]);
+
+                        $image->storeAs('public/images', $path);
+                    }
+                }
+                if ($preImages) {
+                    foreach ($preImages as $image) {
+                        ProductImage::insert([
+                            'product_id' => $id,
+                            'path' => $image->path
+                        ]);
+                    }
+                }
             }
         }
 
-        return response()->json("Edit Success.");
+        return response()->json($data);
     }
 
     public function deleteProduct(Request $request)

@@ -14,9 +14,9 @@ class Product extends Model
         return $this->hasMany(ProductImage::class, 'product_id', 'id');
     }
 
-    public function color()
+    public function colors()
     {
-        return $this->belongstoMany(Color::class, 'productcolor', 'product_id','color_id');
+        return $this->belongstoMany(Color::class, 'productcolor');
     }
 
     protected $fillable = [

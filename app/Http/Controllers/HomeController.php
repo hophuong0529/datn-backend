@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\Category;
 use App\Models\OrderReceiver;
 use App\Models\Product;
+use App\Models\ProductColor;
 use App\Models\SubCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -18,25 +19,29 @@ class HomeController extends Controller
 {
     public function allProduct()
     {
-        $products = Product::with('images', 'sub')->paginate(8);
+        $products = Product::with('images', 'colors', 'sub')->paginate(8);
+
         return $products->toJson();
     }
 
     public function productLatest()
     {
         $products = Product::with('images')->orderBy('created_at', 'desc')->limit(8)->get();
+
         return $products->toJson();
     }
 
     public function productTop()
     {
         $products = Product::with('images')->where('is_top', 1)->get();
+
         return $products->toJson();
     }
 
     public function productSale()
     {
         $products = Product::with('images')->where('on_sale', 1)->get();
+
         return $products->toJson();
     }
 
@@ -46,9 +51,9 @@ class HomeController extends Controller
         foreach ($names as $name => $id) {
             if (Str::slug($name) == $slug) {
                 $product_id = $id;
-
                 $product = Product::find($product_id);
-                $products = Product::with('images')->where('category_id', $product->category_id)->limit(4)->get();
+                $products = Product::with('images')->where('subcategory_id', $product->subcategory_id)->get();
+
                 return $products->toJson();
             }
         }
@@ -57,13 +62,21 @@ class HomeController extends Controller
     public function categories()
     {
         $categories = Category::with('subs')->get();
+
         return $categories->toJson();
     }
 
     public function detailProduct($slug)
     {
-        $product = Product::with('images', 'color', 'sub')->find($slug);
-        if(!$product) {
+        $product = Product::with('images', 'colors', 'sub')->find($slug);
+
+        // Thêm key "quantity" vào array
+        foreach ($product->colors as $color) {
+            $color['quantity'] = ProductColor::where('color_id', $color->id)->first()->quantity;
+        }
+
+        // Tìm chi tiết sp theo slug là tên sp
+        if (!$product) {
             $names = Product::pluck('id', 'name');
             foreach ($names as $name => $id) {
                 if (Str::slug($name) == $slug) {
@@ -72,12 +85,14 @@ class HomeController extends Controller
                 }
             }
         }
+
         return $product->toJson();
     }
 
     public function login(Request $request)
     {
         $account = Account::where('username', $request->input('username'))->first();
+
         if ($account && Hash::check($request->input('password'), $account->password)) {
             return response()->json($account);
         } else {
@@ -90,6 +105,7 @@ class HomeController extends Controller
     public function search($keyword)
     {
         $products = Product::with('images')->where('name', 'like', '%' . $keyword . '%')->get();
+
         return $products->toJson();
     }
 
@@ -119,14 +135,14 @@ class HomeController extends Controller
             'updated_at' => now()
         ]);
 
-        $order = Order::orderBy('id','desc')->first();
+        $order = Order::orderBy('id', 'desc')->first();
 
         OrderReceiver::insert([
             'order_id' => $order->id,
             'name' => $request->input('name'),
             'mobile' => $request->input('mobile'),
             'address' => $request->input('address'),
-            'note' =>  $request->input('note')
+            'note' => $request->input('note')
         ]);
 
         foreach ($request->input('cartItems') as $item):
