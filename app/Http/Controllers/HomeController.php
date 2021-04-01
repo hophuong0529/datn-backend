@@ -2,14 +2,15 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Account;
+use App\Models\Cart;
+use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\OrderReceiver;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\SubCategory;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use App\Models\Order;
 use App\Models\OrderDetail;
@@ -19,28 +20,28 @@ class HomeController extends Controller
 {
     public function allProduct()
     {
-        $products = Product::with('images', 'colors', 'sub')->paginate(8);
+        $products = Product::with('images', 'colors', 'sub')->paginate(12);
 
         return $products->toJson();
     }
 
     public function productLatest()
     {
-        $products = Product::with('images')->orderBy('created_at', 'desc')->limit(8)->get();
-
-        return $products->toJson();
-    }
-
-    public function productTop()
-    {
-        $products = Product::with('images')->where('is_top', 1)->get();
+        $products = Product::with('images', 'colors')->orderBy('created_at', 'desc')->limit(8)->get();
 
         return $products->toJson();
     }
 
     public function productSale()
     {
-        $products = Product::with('images')->where('on_sale', 1)->get();
+        $products = Product::with('images', 'colors')->where('discount', '!=', 0)->orderBy('discount', 'desc')->limit(8)->get();
+
+        return $products->toJson();
+    }
+
+    public function productTop()
+    {
+        $products = Product::with('images', 'colors')->where('is_top', 1)->limit(8)->get();;
 
         return $products->toJson();
     }
@@ -91,39 +92,91 @@ class HomeController extends Controller
 
     public function login(Request $request)
     {
-        $account = Account::where('username', $request->input('username'))->first();
-
-        if ($account && Hash::check($request->input('password'), $account->password)) {
-            return response()->json($account);
+        $credentials = $request->only('username', 'password');
+        if (Auth::attempt($credentials)) {
+            return response()->json(Auth::user());
         } else {
-            return response()->json([
-                'error' => 'Tên đăng nhập hoặc mật khẩu không chính xác.'
-            ], 422);
+            return response()->json('Tên đăng nhập hoặc mật khẩu không chính xác.', 422);
         }
     }
 
     public function search($keyword)
     {
-        $products = Product::with('images')->where('name', 'like', '%' . $keyword . '%')->get();
+        $keyword = str_replace("+", " ", $keyword);
+        $products = Product::with('images')->where('name', 'like', '%' . $keyword . '%')->paginate(12);
 
-        return $products->toJson();
+        return response()->json([
+                'products' => $products,
+                'keyword' => $keyword
+            ]
+        );
     }
 
     public function categoryProduct($slug)
     {
-        $names = Category::pluck('id', 'name');
-        foreach ($names as $name => $id) {
-            if (Str::slug($name) == $slug) {
-                $category_id = $id;
+        $category = Category::with('subs')->find($slug);
+        $sub_categories = Category::with('subs')->find($slug)->subs;
+        $products = Product::with('images', 'colors')->whereIn('subcategory_id', $sub_categories->pluck('id'))->paginate(12);
+        return response()->json([
+            'category' => $category,
+            'subs' => $sub_categories,
+            'products' => $products
+        ]);
+    }
 
-                $category = Category::find($category_id);
-                $products = Product::with('images')->where('category_id', $category_id)->get();
-                return response()->json([
-                    'products' => $products,
-                    'category' => $category
-                ]);
-            }
+    public function subCategoryProduct($slug)
+    {
+        $sub_category = SubCategory::find($slug);
+        $category_id = SubCategory::find($slug)->category_id;
+        $related = Category::find($category_id)->subs;
+        $products = Product::with('images', 'colors')->where('subcategory_id', $slug)->paginate(12);
+        return response()->json([
+            'sub_category' => $sub_category,
+            'related' => $related,
+            'products' => $products
+        ]);
+    }
+
+    public function addToCart(Request $request)
+    {
+        $userId = $request->input('userId');
+        $cart = Cart::where('user_id', $userId)->first();
+//        if (!$cart) {
+//            $cart = Cart::create([
+//                'user_id' => $userId,
+//            ]);
+//            $cart->save();
+//        }
+
+        $productId = $request->input('productId');
+        $colorId = $request->input('colorId');
+        $quantity = $request->input('quantity');
+        $price = $request->input('price');
+        $priceSale = $request->input('priceSale');
+        $cartId = $cart->id;
+        $exist = CartItem::where([
+            'cart_id' => $cartId,
+            'product_id' => $productId,
+            'color_id' => $colorId
+        ])->first();
+
+        if($exist) {
+            $cart = CartItem::find($exist->id)->update([
+                'quantity' => $exist->quantity + $quantity
+            ]);
         }
+
+//        CartItem::insert([
+//            'cart_id' => $cartId,
+//            'product_id' => $productId,
+//            'color_id' => $colorId,
+//            'quantity' => $quantity,
+//            'price' => $price,
+//            'price_sale' => $priceSale,
+//            'total_item' => $priceSale * $quantity
+//        ]);
+
+        return response()->json($exist);
     }
 
     public function order(Request $request)

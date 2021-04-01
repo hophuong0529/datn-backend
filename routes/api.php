@@ -36,13 +36,15 @@ Route::get('related-product/{name}', [HomeController::class, 'productRelated']);
 Route::get('categories', [HomeController::class, 'categories']);
 Route::get('colors', [AdminController::class, 'colors']);
 
+Route::post('carts', [HomeController::class, 'addToCart']);
 
 Route::post('product/delete', [AdminController::class, 'deleteProduct']);
 
 Route::get('product/{slug}', [HomeController::class, 'detailProduct']);
 Route::post('product/{slug}', [AdminController::class, 'updateProduct']);
 
-Route::get('category/{name}', [HomeController::class, 'categoryProduct']);
+Route::get('category/{slug}', [HomeController::class, 'categoryProduct']);
+Route::get('sub-category/{slug}', [HomeController::class, 'subCategoryProduct']);
 
 Route::post('login', [HomeController::class, 'login']);
 

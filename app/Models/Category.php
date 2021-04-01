@@ -10,11 +10,6 @@ class Category extends Model
 
     public $timestamps = false;
 
-    public function products()
-    {
-        return $this->hasMany(Product::class, 'category_id', 'id');
-    }
-
     public function subs()
     {
         return $this->hasMany(SubCategory::class, 'category_id', 'id');
