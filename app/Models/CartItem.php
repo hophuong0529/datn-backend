@@ -15,8 +15,20 @@ class CartItem extends Model
         'color_id',
         'quantity',
         'price',
-        'priceSale'
+        'price_sale',
+        'total_item',
+        'product'
     ];
 
     public $timestamps = true;
+
+    public function product()
+    {
+        return $this->hasOne(Product::class, 'id', 'product_id');
+    }
+
+    public function color()
+    {
+        return $this->hasOne(Color::class, 'id', 'color_id');
+    }
 }

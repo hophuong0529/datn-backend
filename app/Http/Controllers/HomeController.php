@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
+use App\Models\Color;
 use App\Models\OrderReceiver;
 use App\Models\Product;
 use App\Models\ProductColor;
@@ -41,7 +42,7 @@ class HomeController extends Controller
 
     public function productTop()
     {
-        $products = Product::with('images', 'colors')->where('is_top', 1)->limit(8)->get();;
+        $products = Product::with('images', 'colors')->where('is_top', 1)->limit(8)->get();
 
         return $products->toJson();
     }
@@ -103,7 +104,7 @@ class HomeController extends Controller
     public function search($keyword)
     {
         $keyword = str_replace("+", " ", $keyword);
-        $products = Product::with('images')->where('name', 'like', '%' . $keyword . '%')->paginate(12);
+        $products = Product::with('images', 'colors')->where('name', 'like', '%' . $keyword . '%')->paginate(12);
 
         return response()->json([
                 'products' => $products,
@@ -137,16 +138,15 @@ class HomeController extends Controller
         ]);
     }
 
-    public function addToCart(Request $request)
+    public function addToCart($userId, Request $request)
     {
-        $userId = $request->input('userId');
         $cart = Cart::where('user_id', $userId)->first();
-//        if (!$cart) {
-//            $cart = Cart::create([
-//                'user_id' => $userId,
-//            ]);
-//            $cart->save();
-//        }
+        if (!$cart) {
+            $cart = Cart::create([
+                'user_id' => $userId,
+            ]);
+            $cart->save();
+        }
 
         $productId = $request->input('productId');
         $colorId = $request->input('colorId');
@@ -154,29 +154,83 @@ class HomeController extends Controller
         $price = $request->input('price');
         $priceSale = $request->input('priceSale');
         $cartId = $cart->id;
+
         $exist = CartItem::where([
-            'cart_id' => $cartId,
-            'product_id' => $productId,
-            'color_id' => $colorId
+            ['cart_id', '=', $cartId],
+            ['product_id', '=', $productId],
+            ['color_id', '=', $colorId]
         ])->first();
 
-        if($exist) {
-            $cart = CartItem::find($exist->id)->update([
-                'quantity' => $exist->quantity + $quantity
+        if ($exist) {
+            $new_quantity = $exist->quantity + $quantity;
+            CartItem::find($exist->id)->update([
+                'quantity' => $new_quantity,
+                'total_item' => $exist->price_sale * $new_quantity
+            ]);
+        } else {
+            CartItem::insert([
+                'cart_id' => $cartId,
+                'product_id' => $productId,
+                'color_id' => $colorId,
+                'quantity' => $quantity,
+                'price' => $price,
+                'price_sale' => $priceSale,
+                'total_item' => $priceSale * $quantity
             ]);
         }
 
-//        CartItem::insert([
-//            'cart_id' => $cartId,
-//            'product_id' => $productId,
-//            'color_id' => $colorId,
-//            'quantity' => $quantity,
-//            'price' => $price,
-//            'price_sale' => $priceSale,
-//            'total_item' => $priceSale * $quantity
-//        ]);
+        return response()->json("Add Success.");
+    }
 
-        return response()->json($exist);
+    public function cart($userId)
+    {
+        $cartId = Cart::with('items')->where('user_id', $userId)->first()->id;
+        $cartItems = CartItem::with('product', 'color')->where('cart_id', $cartId)->get();
+        $totalCart = 0;
+        foreach ($cartItems as $item) {
+            $product = $item->product;
+            $product['color'] = $item->color->name;
+            $product['quantity'] = $item->quantity;
+            $product['images'] = $product->images;
+            $totalCart += $item->total_item;
+        }
+
+        return response()->json([
+            'cartItems' => $cartItems
+        ]);
+    }
+
+    public function deleteCart(Request $request)
+    {
+        $cartId = Cart::where('user_id', $request->input('userId'))->first()->id;
+        $colorId = Color::where('name', $request->input('color'))->first()->id;
+        CartItem::where([
+            ['cart_id', '=', $cartId],
+            ['product_id', '=', $request->input('productId')],
+            ['color_id', '=', $colorId]
+        ])->delete();
+
+        return response()->json("Delete Success.");
+    }
+
+    public function editCart(Request $request)
+    {
+        $cartId = Cart::where('user_id', $request->input('userId'))->first()->id;
+        $colorId = Color::where('name', $request->input('color'))->first()->id;
+        $new_quantity = $request->input('quantity');
+
+        $cartItemId = CartItem::where([
+            ['cart_id', '=', $cartId],
+            ['product_id', '=', $request->input('productId')],
+            ['color_id', '=', $colorId]
+        ])->first()->id;
+        $cartItem = CartItem::find($cartItemId);
+        CartItem::find($cartItemId)->update([
+            'quantity' => $new_quantity,
+            'total_item' => $cartItem->price_sale * $new_quantity
+        ]);
+
+        return response()->json("Edit success.");
     }
 
     public function order(Request $request)
@@ -214,7 +268,7 @@ class HomeController extends Controller
 
         endforeach;
 
-        return response()->json("Success");
+        return response()->json("Order Success.");
     }
 
 }

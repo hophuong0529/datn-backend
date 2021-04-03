@@ -110,6 +110,6 @@ class AdminController extends Controller
         ProductImage::where('product_id', $id)->delete();
         ProductColor::where('product_id', $id)->delete();
 
-        return response()->json("Deleted Success.");
+        return response()->json("Delete Success.");
     }
 }

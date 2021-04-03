@@ -17,4 +17,9 @@ class Cart extends Model
     {
         return $this->hasOne(User::class, 'id', 'user_id');
     }
+
+    public function items()
+    {
+        return $this->hasMany(CartItem::class, 'cart_id', 'id');
+    }
 }
