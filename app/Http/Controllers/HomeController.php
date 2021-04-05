@@ -42,7 +42,7 @@ class HomeController extends Controller
 
     public function productTop()
     {
-        $products = Product::with('images', 'colors')->where('is_top', 1)->limit(8)->get();
+        $products = Product::with('images', 'colors')->where('is_top', 1)->orderBy('created_at', 'desc')->limit(8)->get();
 
         return $products->toJson();
     }
