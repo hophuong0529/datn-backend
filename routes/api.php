@@ -2,7 +2,7 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\HomeController;
+use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 
 /*
@@ -21,33 +21,33 @@ Route::middleware('auth:api')->get('/user', function (Request $request) {
 });
 
 //Product
-Route::get('latest-product', [HomeController::class, 'productLatest']);
-Route::get('top-product', [HomeController::class, 'productTop']);
-Route::get('sale-product', [HomeController::class, 'productSale']);
-Route::get('products', [HomeController::class, 'allProduct']);
+Route::get('latest-product', [UserController::class, 'productLatest']);
+Route::get('top-product', [UserController::class, 'productTop']);
+Route::get('sale-product', [UserController::class, 'productSale']);
+Route::get('products', [UserController::class, 'allProduct']);
 Route::post('products', [AdminController::class, 'storeProduct']);
 Route::post('product/delete', [AdminController::class, 'deleteProduct']);
-Route::get('product/{slug}', [HomeController::class, 'detailProduct']);
+Route::get('product/{slug}', [UserController::class, 'detailProduct']);
 Route::post('product/{slug}', [AdminController::class, 'updateProduct']);
-Route::get('related-product/{name}', [HomeController::class, 'productRelated']);
-Route::get('search/{keyword}', [HomeController::class, 'search']);
+Route::get('related-product/{name}', [UserController::class, 'productRelated']);
+Route::get('search/{keyword}', [UserController::class, 'search']);
 
 //Category
-Route::get('categories', [HomeController::class, 'categories']);
-Route::get('category/{slug}', [HomeController::class, 'categoryProduct']);
-Route::get('sub-category/{slug}', [HomeController::class, 'subCategoryProduct']);
+Route::get('categories', [UserController::class, 'categories']);
+Route::get('category/{slug}', [UserController::class, 'categoryProduct']);
+Route::get('sub-category/{slug}', [UserController::class, 'subCategoryProduct']);
 
 //Color
 Route::get('colors', [AdminController::class, 'colors']);
 
 //Cart
-Route::post('cart/{user_id}', [HomeController::class, 'addToCart']);
-Route::get('cart/{user_id}', [HomeController::class, 'cart']);
-Route::post('cart-item/delete', [HomeController::class, 'deleteCart']);
-Route::post('cart-item/edit', [HomeController::class, 'editCart']);
+Route::post('cart/{user_id}', [UserController::class, 'addToCart']);
+Route::get('cart/{user_id}', [UserController::class, 'cart']);
+Route::post('cart-item/delete', [UserController::class, 'deleteCart']);
+Route::post('cart-item/edit', [UserController::class, 'editCart']);
 
 //Login
-Route::post('login', [HomeController::class, 'login']);
+Route::post('login', [UserController::class, 'login']);
 
-//Order
-Route::post('order', [HomeController::class, 'order']);
+//OrderBuy
+Route::post('order', [UserController::class, 'order']);

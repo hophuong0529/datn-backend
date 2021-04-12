@@ -5,7 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class OrderReceiver extends Model
+class Receiver extends Model
 {
-    protected $table = 'order_receiver';
+    protected $table = 'receiver';
 }

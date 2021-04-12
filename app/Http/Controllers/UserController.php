@@ -6,18 +6,18 @@ use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
 use App\Models\Color;
-use App\Models\OrderReceiver;
+use App\Models\Receiver;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\SubCategory;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
-use App\Models\Order;
+use App\Models\OrderBuy;
 use App\Models\OrderDetail;
 
 
-class HomeController extends Controller
+class UserController extends Controller
 {
     public function allProduct()
     {
@@ -140,7 +140,10 @@ class HomeController extends Controller
 
     public function addToCart($userId, Request $request)
     {
+        //Check tồn tại user_id
         $cart = Cart::where('user_id', $userId)->first();
+
+        //Nếu không tồn tại thì tạo mới Cart
         if (!$cart) {
             $cart = Cart::create([
                 'user_id' => $userId,
@@ -155,19 +158,23 @@ class HomeController extends Controller
         $priceSale = $request->input('priceSale');
         $cartId = $cart->id;
 
+        //Check tồn tại CartItem
         $exist = CartItem::where([
             ['cart_id', '=', $cartId],
             ['product_id', '=', $productId],
             ['color_id', '=', $colorId]
         ])->first();
 
+
+        //Nếu đã tồn tại CartItem, thay đổi số lượng và tổng
         if ($exist) {
             $new_quantity = $exist->quantity + $quantity;
             CartItem::find($exist->id)->update([
                 'quantity' => $new_quantity,
                 'total_item' => $exist->price_sale * $new_quantity
             ]);
-        } else {
+        } //Nếu k tồn tại thì tạo mới CartItem
+        else {
             CartItem::insert([
                 'cart_id' => $cartId,
                 'product_id' => $productId,
@@ -235,40 +242,52 @@ class HomeController extends Controller
 
     public function order(Request $request)
     {
-        Order::insert([
-            'user_id' => $request->input('account.id'),
-            'method_id' => $request->input('method'),
-            'created_at' => now(),
-            'updated_at' => now()
+        //Thêm vào OrderBuy
+        OrderBuy::insert([
+            'user_id' => $request->input('userId'),
+            'method_id' => $request->input('methodId'),
+            'total_bill' => $request->input('totalCart') + 35000
         ]);
 
-        $order = Order::orderBy('id', 'desc')->first();
-
-        OrderReceiver::insert([
+        //Thêm vào Receiver
+        $order = OrderBuy::orderBy('id', 'desc')->first();
+        Receiver::insert([
             'order_id' => $order->id,
             'name' => $request->input('name'),
             'mobile' => $request->input('mobile'),
+            'email' => $request->input('email'),
             'address' => $request->input('address'),
             'note' => $request->input('note')
         ]);
 
+        //Thêm vào OrderDetail
         foreach ($request->input('cartItems') as $item):
-
             OrderDetail::insert([
                 'order_id' => $order->id,
                 'product_id' => $item['id'],
+                'color_id' => Color::where('name', $item['color'])->first()->id,
                 'quantity' => $item['quantity'],
-                'price' => $item['price']
+                'price' => $item['price'],
+                'price_sale' => $item['price'] * (100 - $item['discount']) / 100,
+                'total_item' => ($item['price'] * (100 - $item['discount']) / 100) * $item['quantity']
             ]);
 
-            $product = Product::find($item['id']);
-            $product->update([
-                'quantity' => ($product->quantity - $item['quantity'])
-            ]);
+            $productColorId = ProductColor::where([
+                'product_id' => $item['id'],
+                'color_id' => Color::where('name', $item['color'])->first()->id,
+            ])->first()->id;
 
+            $productColor = ProductColor::find($productColorId);
+            ProductColor::find($productColorId)->update([
+                'quantity' => ($productColor->quantity - $item['quantity'])
+            ]);
         endforeach;
 
-        return response()->json("Order Success.");
+        //Xóa CartItem
+        $cartId = Cart::where('user_id', $request->input('userId'))->first()->id;
+        CartItem::where('cart_id', $cartId)->delete();
+
+        return response()->json();
     }
 
 }
