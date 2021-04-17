@@ -16,9 +16,12 @@ use App\Http\Controllers\AdminController;
 |
 */
 
-Route::middleware('auth:api')->get('/user', function (Request $request) {
+//User
+Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::post('profile/{id}', [UserController::class, 'updateProfile']);
+Route::post('profile/change-password/{id}', [UserController::class, 'changePassword']);
 
 //Product
 Route::get('latest-product', [UserController::class, 'productLatest']);
@@ -48,6 +51,9 @@ Route::post('cart-item/edit', [UserController::class, 'editCart']);
 
 //Login
 Route::post('login', [UserController::class, 'login']);
+Route::middleware('auth:sanctum')->get('logout', [UserController::class, 'logout']);
 
 //OrderBuy
-Route::post('order', [UserController::class, 'order']);
+Route::post('order', [UserController::class, 'storeOrder']);
+Route::get('order/{user_id}', [UserController::class, 'orders']);
+Route::get('order-method', [UserController::class, 'orderMethods']);

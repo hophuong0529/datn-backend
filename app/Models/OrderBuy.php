@@ -12,6 +12,7 @@ class OrderBuy extends Model
         'user_id',
         'status_id',
         'quantity',
+        'created_at'
         ];
 
     public $timestamps = true;
@@ -24,5 +25,10 @@ class OrderBuy extends Model
     public function status()
     {
         return $this->hasOne(StatusOrder::class, 'id', 'status_id');
+    }
+
+    public function receiver()
+    {
+        return $this->hasOne(Receiver::class, 'order_id', 'id');
     }
 }

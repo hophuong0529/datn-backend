@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Product;
 use App\Models\ProductColor;
 use Illuminate\Http\Request;
 use App\Repositories\Product\ProductRepository;
@@ -32,13 +33,20 @@ class AdminController extends Controller
 
         //Insert ProductColor table
         $colors = json_decode($request->colors);
+        $product_quantity = 0;
         foreach ($colors as $color) {
             ProductColor::insert([
                 'product_id' => $product->id,
                 'color_id' => $color->id,
                 'quantity' => $color->quantity,
             ]);
+            $product_quantity += $colors->quantity;
         }
+
+        //Update quantity
+        Product::find($product->id)->update([
+            'quantity' => $product_quantity
+        ]);
 
         //Insert ProductImage table
         $images = $request->images;
@@ -59,10 +67,11 @@ class AdminController extends Controller
         //Update ProductColor table
         $data = $request->all();
 
-        $this->repository->edit($data, $id);
+        $product = $this->repository->edit($data, $id);
 
         //Insert ProductColor table
         $colors = json_decode($request->colors);
+        $product_quantity = 0;
         if ($colors) {
             ProductColor::where('product_id', $id)->delete();
             foreach ($colors as $color) {
@@ -71,7 +80,13 @@ class AdminController extends Controller
                     'color_id' => $color->id,
                     'quantity' => $color->quantity,
                 ]);
+                $product_quantity = $product_quantity + $color->quantity;
             }
+
+            //Update quantity
+            Product::find($id)->update([
+                'quantity' => $product_quantity
+            ]);
 
             //Insert ProductImage table
             $images = $request->images;

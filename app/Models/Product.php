@@ -23,16 +23,22 @@ class Product extends Model
     protected $fillable = [
         'code',
         'name',
+        'producer_id',
+        'description',
         'subcategory_id',
         'discount',
         'price',
+        'quantity',
         'is_top',
-        'created_at',
-        'updated_at',
     ];
 
     public function sub()
     {
         return $this->hasOne(SubCategory::class, 'id', 'subcategory_id');
+    }
+
+    public function producer()
+    {
+        return $this->belongsTo(Producer::class, 'producer_id', 'id');
     }
 }

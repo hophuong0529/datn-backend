@@ -2,6 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\OrderMethod;
+use App\Models\StatusOrder;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Illuminate\Http\Request;
 use App\Models\Cart;
 use App\Models\CartItem;
 use App\Models\Category;
@@ -10,19 +17,35 @@ use App\Models\Receiver;
 use App\Models\Product;
 use App\Models\ProductColor;
 use App\Models\SubCategory;
-use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Str;
 use App\Models\OrderBuy;
 use App\Models\OrderDetail;
 
 
 class UserController extends Controller
 {
+    public function updateProfile($id, Request $request)
+    {
+        User::find($id)->update([
+            'name' => $request->input('name'),
+            'mobile' => $request->input('mobile'),
+            'email' => $request->input('email'),
+            'address' => $request->input('address')
+        ]);
+
+        return response()->json('success');
+    }
+
     public function allProduct()
     {
-        $products = Product::with('images', 'colors', 'sub')->paginate(12);
-
+        $products = Product::with('images', 'colors', 'sub', 'producer')->paginate(12);
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return $products->toJson();
     }
 
@@ -70,11 +93,14 @@ class UserController extends Controller
 
     public function detailProduct($slug)
     {
-        $product = Product::with('images', 'colors', 'sub')->find($slug);
+        $product = Product::with('images', 'colors', 'sub', 'producer')->find($slug);
 
         // Thêm key "quantity" vào array
         foreach ($product->colors as $color) {
-            $color['quantity'] = ProductColor::where('color_id', $color->id)->first()->quantity;
+            $color['quantity'] = ProductColor::where([
+                'product_id' => $slug,
+                'color_id' => $color->id
+            ])->first()->quantity;
         }
 
         // Tìm chi tiết sp theo slug là tên sp
@@ -93,17 +119,25 @@ class UserController extends Controller
 
     public function login(Request $request)
     {
-        $credentials = $request->only('username', 'password');
-        if (Auth::attempt($credentials)) {
-            return response()->json(Auth::user());
-        } else {
-            return response()->json('Tên đăng nhập hoặc mật khẩu không chính xác.', 422);
+        $credentials = $request->only(['username', 'password']);
+        if (!Auth::attempt($credentials)) {
+            return response()->json(['error' => 'unauthenticated'], 401);
         }
+        $user = Auth::user();
+        $token = $request->user()->createToken('Access Token')->plainTextToken;
+
+        return response()->json(['success' => true, 'access_token' => $token, 'user' => $user]);
     }
+
+    public function logout(Request $request)
+    {
+        $request->user()->tokens()->delete();;
+        return response()->json("success");
+    }
+
 
     public function search($keyword)
     {
-        $keyword = str_replace("+", " ", $keyword);
         $products = Product::with('images', 'colors')->where('name', 'like', '%' . $keyword . '%')->paginate(12);
 
         return response()->json([
@@ -240,10 +274,12 @@ class UserController extends Controller
         return response()->json("Edit success.");
     }
 
-    public function order(Request $request)
+    public function storeOrder(Request $request)
     {
+        $codeOrder = rand(10000000, 99999999);
         //Thêm vào OrderBuy
         OrderBuy::insert([
+            'code' => $codeOrder,
             'user_id' => $request->input('userId'),
             'method_id' => $request->input('methodId'),
             'total_bill' => $request->input('totalCart') + 35000
@@ -261,7 +297,7 @@ class UserController extends Controller
         ]);
 
         //Thêm vào OrderDetail
-        foreach ($request->input('cartItems') as $item):
+        foreach ($request->input('cartItems') as $item) {
             OrderDetail::insert([
                 'order_id' => $order->id,
                 'product_id' => $item['id'],
@@ -272,6 +308,7 @@ class UserController extends Controller
                 'total_item' => ($item['price'] * (100 - $item['discount']) / 100) * $item['quantity']
             ]);
 
+            //Update quantity ProductColor
             $productColorId = ProductColor::where([
                 'product_id' => $item['id'],
                 'color_id' => Color::where('name', $item['color'])->first()->id,
@@ -281,13 +318,54 @@ class UserController extends Controller
             ProductColor::find($productColorId)->update([
                 'quantity' => ($productColor->quantity - $item['quantity'])
             ]);
-        endforeach;
+
+            //Update quantity Product
+            $product = Product::find($item['id']);
+            Product::find($item['id'])->update([
+                'quantity' => ($product->quantity - $item['quantity'])
+            ]);
+        }
 
         //Xóa CartItem
         $cartId = Cart::where('user_id', $request->input('userId'))->first()->id;
         CartItem::where('cart_id', $cartId)->delete();
 
-        return response()->json();
+        return response()->json($codeOrder);
     }
 
+    public function orders($userId)
+    {
+        $orders = OrderBuy::with('receiver', 'details')->where('user_id', $userId)->get();
+        foreach ($orders as $order) {
+            $order['method'] = OrderMethod::where('id', $order->method_id)->first()->name;
+            $order['status'] = StatusOrder::where('id', $order->status_id)->first()->status;
+            foreach ($order->details as $item) {
+                $product = $item->product;
+                $product['color'] = $item->color->name;
+                $product['quantity'] = $item->quantity;
+                $product['images'] = $product->images;
+            }
+        }
+
+        return $orders->toJson();
+    }
+
+    public function orderMethods()
+    {
+        $methods = OrderMethod::all();
+        return $methods->toJson();
+    }
+
+    public function changePassword($id, Request $request)
+    {
+        $user = User::find($id)->first();
+        if (Hash::check($request->input('oldPassword'), $user->password)) {
+            $user = User::find($id)->update([
+                'password' => Hash::make($request->input('newPassword'))
+            ]);
+            return response()->json(11111);
+        } else {
+            return response()->json(['error' => 'Sai mật khẩu!'], 401);
+        }
+    }
 }
