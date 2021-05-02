@@ -20,6 +20,8 @@ use App\Http\Controllers\AdminController;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+Route::get('users', [AdminController::class, 'users']);
+Route::post('user/{id}', [AdminController::class, 'updateUser']);
 Route::post('profile/{id}', [UserController::class, 'updateProfile']);
 Route::post('profile/change-password/{id}', [UserController::class, 'changePassword']);
 
@@ -31,14 +33,23 @@ Route::get('products', [UserController::class, 'allProduct']);
 Route::post('products', [AdminController::class, 'storeProduct']);
 Route::post('product/delete', [AdminController::class, 'deleteProduct']);
 Route::get('product/{slug}', [UserController::class, 'detailProduct']);
-Route::post('product/{slug}', [AdminController::class, 'updateProduct']);
+Route::post('product/{id}', [AdminController::class, 'updateProduct']);
 Route::get('related-product/{name}', [UserController::class, 'productRelated']);
 Route::get('search/{keyword}', [UserController::class, 'search']);
 
 //Category
-Route::get('categories', [UserController::class, 'categories']);
-Route::get('category/{slug}', [UserController::class, 'categoryProduct']);
-Route::get('sub-category/{slug}', [UserController::class, 'subCategoryProduct']);
+Route::get('categories', [AdminController::class, 'categories']);
+Route::post('categories', [AdminController::class, 'storeCategory']);
+Route::post('category/delete', [AdminController::class, 'deleteCategory']);
+Route::post('category/{id}', [AdminController::class, 'updateCategory']);
+Route::get('category/{id}', [UserController::class, 'categoryProduct']);
+
+//Sub Category
+Route::get('sub-categories', [AdminController::class, 'subCategories']);
+Route::post('sub-categories', [AdminController::class, 'storeSubCategory']);
+Route::post('sub-category/delete', [AdminController::class, 'deleteSubCategory']);
+Route::get('sub-category/{id}', [UserController::class, 'subCategoryProduct']);
+Route::post('sub-category/{id}', [AdminController::class, 'updateSubCategory']);
 
 //Color
 Route::get('colors', [AdminController::class, 'colors']);
@@ -55,5 +66,16 @@ Route::middleware('auth:sanctum')->get('logout', [UserController::class, 'logout
 
 //OrderBuy
 Route::post('order', [UserController::class, 'storeOrder']);
-Route::get('order/{user_id}', [UserController::class, 'orders']);
+Route::get('orders/{user_id}', [UserController::class, 'ordersUser']);
+Route::get('orders', [AdminController::class, 'orders']);
+Route::post('order/{id}', [AdminController::class, 'updateOrder']);
 Route::get('order-method', [UserController::class, 'orderMethods']);
+
+//Status Order
+Route::get('states', [AdminController::class, 'states']);
+
+//Producer
+Route::get('producers', [AdminController::class, 'producers']);
+Route::post('producers', [AdminController::class, 'storeProducer']);
+Route::post('producer/delete', [AdminController::class, 'deleteProducer']);
+Route::post('producer/{id}', [AdminController::class, 'updateProducer']);

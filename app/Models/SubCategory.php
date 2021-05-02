@@ -9,9 +9,14 @@ class SubCategory extends Model
 {
     protected $table = 'subcategory';
 
+    protected $fillable = [
+        'name',
+        'category_id'
+    ];
+
     public function category()
     {
-        return $this->belongTo(Category::class, 'category_id', 'id');
+        return $this->belongsTo(Category::class, 'category_id', 'id');
     }
 
     public function products()

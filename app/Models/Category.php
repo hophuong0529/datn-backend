@@ -10,6 +10,10 @@ class Category extends Model
 
     public $timestamps = false;
 
+    protected $fillable = [
+        'name'
+    ];
+
     public function subs()
     {
         return $this->hasMany(SubCategory::class, 'category_id', 'id');

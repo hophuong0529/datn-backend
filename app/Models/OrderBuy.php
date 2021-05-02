@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Mockery\Generator\Method;
 
 class OrderBuy extends Model
 {
@@ -24,11 +25,21 @@ class OrderBuy extends Model
 
     public function status()
     {
-        return $this->hasOne(StatusOrder::class, 'id', 'status_id');
+        return $this->belongsTo(OrderStatus::class);
+    }
+
+    public function method()
+    {
+        return $this->belongsTo(OrderMethod::class);
     }
 
     public function receiver()
     {
         return $this->hasOne(Receiver::class, 'order_id', 'id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

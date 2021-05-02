@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\OrderMethod;
-use App\Models\StatusOrder;
+use App\Models\OrderStatus;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -70,27 +70,6 @@ class UserController extends Controller
         return $products->toJson();
     }
 
-    public function productRelated($slug)
-    {
-        $names = Product::pluck('id', 'name');
-        foreach ($names as $name => $id) {
-            if (Str::slug($name) == $slug) {
-                $product_id = $id;
-                $product = Product::find($product_id);
-                $products = Product::with('images')->where('subcategory_id', $product->subcategory_id)->get();
-
-                return $products->toJson();
-            }
-        }
-    }
-
-    public function categories()
-    {
-        $categories = Category::with('subs')->get();
-
-        return $categories->toJson();
-    }
-
     public function detailProduct($slug)
     {
         $product = Product::with('images', 'colors', 'sub', 'producer')->find($slug);
@@ -147,10 +126,10 @@ class UserController extends Controller
         );
     }
 
-    public function categoryProduct($slug)
+    public function categoryProduct($id)
     {
-        $category = Category::with('subs')->find($slug);
-        $sub_categories = Category::with('subs')->find($slug)->subs;
+        $category = Category::with('subs')->find($id);
+        $sub_categories = Category::with('subs')->find($id)->subs;
         $products = Product::with('images', 'colors')->whereIn('subcategory_id', $sub_categories->pluck('id'))->paginate(12);
         return response()->json([
             'category' => $category,
@@ -159,12 +138,12 @@ class UserController extends Controller
         ]);
     }
 
-    public function subCategoryProduct($slug)
+    public function subCategoryProduct($id)
     {
-        $sub_category = SubCategory::find($slug);
-        $category_id = SubCategory::find($slug)->category_id;
+        $sub_category = SubCategory::find($id);
+        $category_id = SubCategory::find($id)->category_id;
         $related = Category::find($category_id)->subs;
-        $products = Product::with('images', 'colors')->where('subcategory_id', $slug)->paginate(12);
+        $products = Product::with('images', 'colors')->where('subcategory_id', $id)->paginate(12);
         return response()->json([
             'sub_category' => $sub_category,
             'related' => $related,
@@ -333,12 +312,12 @@ class UserController extends Controller
         return response()->json($codeOrder);
     }
 
-    public function orders($userId)
+    public function ordersUser($userId)
     {
         $orders = OrderBuy::with('receiver', 'details')->where('user_id', $userId)->get();
         foreach ($orders as $order) {
             $order['method'] = OrderMethod::where('id', $order->method_id)->first()->name;
-            $order['status'] = StatusOrder::where('id', $order->status_id)->first()->status;
+            $order['status'] = OrderStatus::where('id', $order->status_id)->first()->status;
             foreach ($order->details as $item) {
                 $product = $item->product;
                 $product['color'] = $item->color->name;

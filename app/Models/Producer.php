@@ -12,5 +12,10 @@ class Producer extends Model
     protected $fillable = [
         'name',
         'address',
+        'quantity_import'
     ];
+
+    public function products() {
+        return $this->hasMany(Product::class);
+    }
 }
