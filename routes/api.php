@@ -53,6 +53,9 @@ Route::post('sub-category/{id}', [AdminController::class, 'updateSubCategory']);
 
 //Color
 Route::get('colors', [AdminController::class, 'colors']);
+Route::post('colors', [AdminController::class, 'storeColor']);
+Route::post('color/delete', [AdminController::class, 'deleteColor']);
+Route::post('color/{id}', [AdminController::class, 'updateColor']);
 
 //Cart
 Route::post('cart/{user_id}', [UserController::class, 'addToCart']);
@@ -62,6 +65,7 @@ Route::post('cart-item/edit', [UserController::class, 'editCart']);
 
 //Login
 Route::post('login', [UserController::class, 'login']);
+Route::post('register', [UserController::class, 'register']);
 Route::middleware('auth:sanctum')->get('logout', [UserController::class, 'logout']);
 
 //OrderBuy

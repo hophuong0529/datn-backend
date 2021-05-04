@@ -50,6 +50,12 @@ class AdminController extends Controller
         return $categories->toJson();
     }
 
+    public function subCategories()
+    {
+        $categories = SubCategory::with('category')->paginate(8);
+        return $categories->toJson();
+    }
+
     public function orders()
     {
         $orders = OrderBuy::with('receiver', 'status', 'user', 'method')->get();
@@ -186,12 +192,6 @@ class AdminController extends Controller
         return response()->json("Delete Success.");
     }
 
-    public function subCategories()
-    {
-        $categories = SubCategory::with('category')->paginate(8);
-        return $categories->toJson();
-    }
-
     public function storeCategory(Request $request)
     {
         Category::insert([
@@ -199,6 +199,23 @@ class AdminController extends Controller
         ]);
 
         return $this->categories();
+    }
+
+    public function updateCategory($id, Request $request)
+    {
+        Category::find($id)->update([
+            'name' => $request->input('name')
+        ]);
+
+        return $this->categories();
+    }
+
+    public function deleteCategory(Request $request)
+    {
+        $id = $request->input('categoryId');
+        Category::find($id)->delete();
+
+        return response()->json("Delete Success.");
     }
 
     public function storeSubCategory(Request $request)
@@ -211,15 +228,6 @@ class AdminController extends Controller
         return $this->subCategories();
     }
 
-    public function updateCategory($id, Request $request)
-    {
-        Category::find($id)->update([
-            'name' => $request->input('name')
-        ]);
-
-        return $this->categories();
-    }
-
     public function updateSubCategory($id, Request $request)
     {
         SubCategory::find($id)->update([
@@ -230,13 +238,7 @@ class AdminController extends Controller
         return $this->subCategories();
     }
 
-    public function deleteCategory(Request $request)
-    {
-        $id = $request->input('categoryId');
-        Category::find($id)->delete();
 
-        return response()->json("Delete Success.");
-    }
 
     public function deleteSubCategory(Request $request)
     {
@@ -292,5 +294,33 @@ class AdminController extends Controller
         ]);
 
         return $this->users();
+    }
+
+    public function storeColor(Request $request)
+    {
+        Color::insert([
+            'name' => $request->input('name'),
+            'code' => $request->input('code')
+        ]);
+
+        return $this->colors();
+    }
+
+    public function updateColor($id, Request $request)
+    {
+        Color::find($id)->update([
+            'name' => $request->input('name'),
+            'code' => $request->input('code')
+        ]);
+
+        return $this->colors();
+    }
+
+    public function deleteColor(Request $request)
+    {
+        $id = $request->input('colorId');
+        Color::find($id)->delete();
+
+        return response()->json("Delete Success.");
     }
 }

@@ -108,16 +108,36 @@ class UserController extends Controller
         return response()->json(['success' => true, 'access_token' => $token, 'user' => $user]);
     }
 
+    public function register(Request $request)
+    {
+        $data = $request->all();
+        $user = User::create([
+            'username' => $data['username'],
+            'name' => $data['name'],
+            'email' => $data['email'],
+            'mobile' => $data['mobile'],
+            'address' => $data['address'],
+            'password' => Hash::make($data['password'])
+        ]);
+
+        Auth::login($user);
+        $token = $request->user()->createToken('Access Token')->plainTextToken;
+
+        return response()->json(['success' => true, 'access_token' => $token, 'user' => $user]);
+    }
+
     public function logout(Request $request)
     {
         $request->user()->tokens()->delete();;
         return response()->json("success");
     }
 
-
     public function search($keyword)
     {
-        $products = Product::with('images', 'colors')->where('name', 'like', '%' . $keyword . '%')->paginate(12);
+        $products = Product::with('images', 'colors')
+            ->where('name', 'like', '%' . $keyword . '%')
+            ->orWhere('code', 'like', '%' . $keyword . '%')
+            ->paginate(12);
 
         return response()->json([
                 'products' => $products,
@@ -204,20 +224,24 @@ class UserController extends Controller
 
     public function cart($userId)
     {
-        $cartId = Cart::with('items')->where('user_id', $userId)->first()->id;
-        $cartItems = CartItem::with('product', 'color')->where('cart_id', $cartId)->get();
-        $totalCart = 0;
-        foreach ($cartItems as $item) {
-            $product = $item->product;
-            $product['color'] = $item->color->name;
-            $product['quantity'] = $item->quantity;
-            $product['images'] = $product->images;
-            $totalCart += $item->total_item;
-        }
+        $cart = Cart::with('items')->where('user_id', $userId)->first();
+        if(!$cart) {
+            return response()->json("Cart is empty.");
+        } else {
+            $cartItems = CartItem::with('product', 'color')->where('cart_id', $cart->id)->get();
+            $totalCart = 0;
+            foreach ($cartItems as $item) {
+                $product = $item->product;
+                $product['color'] = $item->color->name;
+                $product['quantity'] = $item->quantity;
+                $product['images'] = $product->images;
+                $totalCart += $item->total_item;
+            }
 
-        return response()->json([
-            'cartItems' => $cartItems
-        ]);
+            return response()->json([
+                'cartItems' => $cartItems
+            ]);
+        }
     }
 
     public function deleteCart(Request $request)
