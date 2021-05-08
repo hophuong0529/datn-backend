@@ -238,8 +238,6 @@ class AdminController extends Controller
         return $this->subCategories();
     }
 
-
-
     public function deleteSubCategory(Request $request)
     {
         $id = $request->input('categoryId');
@@ -322,5 +320,39 @@ class AdminController extends Controller
         Color::find($id)->delete();
 
         return response()->json("Delete Success.");
+    }
+
+    public function statistic()
+    {
+        $products = Product::all();
+        $colors = Color::all();
+        $orders = OrderBuy::all();
+        $producers = Producer::all();
+        $users = User::all();
+        $categories = Category::all();
+        $subCategories = SubCategory::all();
+
+        return response()->json([
+            'product' => $products->count(),
+            'color' => $colors->count(),
+            'producer' => $producers->count(),
+            'user' => $users->count(),
+            'order' => $orders->count(),
+            'category' => $categories->count() + $subCategories->count()
+        ]);
+    }
+
+    public function statisticProduct()
+    {
+        $products = Product::with('images', 'details')->paginate(10);
+        foreach ($products as $product) {
+            $quantity = 0;
+            foreach ($product->details as $detail) {
+                $quantity = $quantity + $detail->quantity;
+            }
+            $product['quantity_export'] = $quantity;
+            $product['quantity_import'] = $quantity + $product->quantity;
+        }
+        return $products->toJson();
     }
 }

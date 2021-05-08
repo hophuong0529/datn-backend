@@ -10,15 +10,7 @@ class Product extends Model
 
     public $timestamps = true;
 
-    public function images()
-    {
-        return $this->hasMany(ProductImage::class, 'product_id', 'id');
-    }
 
-    public function colors()
-    {
-        return $this->belongstoMany(Color::class, 'productcolor');
-    }
 
     protected $fillable = [
         'code',
@@ -27,6 +19,7 @@ class Product extends Model
         'description',
         'subcategory_id',
         'discount',
+        'price_import',
         'price',
         'quantity',
         'is_top',
@@ -34,11 +27,26 @@ class Product extends Model
 
     public function sub()
     {
-        return $this->hasOne(SubCategory::class, 'id', 'subcategory_id');
+        return $this->belongsTo(SubCategory::class);
     }
 
     public function producer()
     {
-        return $this->belongsTo(Producer::class, 'producer_id', 'id');
+        return $this->belongsTo(Producer::class,);
+    }
+
+    public function images()
+    {
+        return $this->hasMany(ProductImage::class);
+    }
+
+    public function colors()
+    {
+        return $this->belongstoMany(Color::class, 'productcolor');
+    }
+
+    public function details()
+    {
+        return $this->hasMany(OrderDetail::class);
     }
 }

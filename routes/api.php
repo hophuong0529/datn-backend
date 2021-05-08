@@ -83,3 +83,7 @@ Route::get('producers', [AdminController::class, 'producers']);
 Route::post('producers', [AdminController::class, 'storeProducer']);
 Route::post('producer/delete', [AdminController::class, 'deleteProducer']);
 Route::post('producer/{id}', [AdminController::class, 'updateProducer']);
+
+//Statistic
+Route::get('statistic', [AdminController::class, 'statistic']);
+Route::get('statistic/product', [AdminController::class, 'statisticProduct']);
