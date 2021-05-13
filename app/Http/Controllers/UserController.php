@@ -52,21 +52,18 @@ class UserController extends Controller
     public function productLatest()
     {
         $products = Product::with('images', 'colors')->orderBy('created_at', 'desc')->limit(8)->get();
-
         return $products->toJson();
     }
 
     public function productSale()
     {
         $products = Product::with('images', 'colors')->where('discount', '!=', 0)->orderBy('discount', 'desc')->limit(8)->get();
-
         return $products->toJson();
     }
 
     public function productTop()
     {
         $products = Product::with('images', 'colors')->where('is_top', 1)->orderBy('created_at', 'desc')->limit(8)->get();
-
         return $products->toJson();
     }
 
@@ -208,7 +205,7 @@ class UserController extends Controller
             ]);
         } //Nếu k tồn tại thì tạo mới CartItem
         else {
-            CartItem::insert([
+            $cartItem = CartItem::create([
                 'cart_id' => $cartId,
                 'product_id' => $productId,
                 'color_id' => $colorId,
@@ -217,6 +214,7 @@ class UserController extends Controller
                 'price_sale' => $priceSale,
                 'total_item' => $priceSale * $quantity
             ]);
+            $cartItem->save();
         }
 
         return response()->json("Add Success.");

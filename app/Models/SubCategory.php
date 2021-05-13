@@ -16,11 +16,11 @@ class SubCategory extends Model
 
     public function category()
     {
-        return $this->belongsTo(Category::class, 'category_id', 'id');
+        return $this->belongsTo(Category::class);
     }
 
     public function products()
     {
-        return $this->hasMany(Product::class, 'id', 'product_id');
+        return $this->hasMany(Product::class, 'subcategory_id');
     }
 }

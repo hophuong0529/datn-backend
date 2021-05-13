@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Repositories\Product\ProductRepository;
 use App\Models\ProductImage;
 use App\Models\Color;
+use Illuminate\Support\Facades\Auth;
 
 class AdminController extends Controller
 {
@@ -25,9 +26,28 @@ class AdminController extends Controller
         $this->repository = $repository;
     }
 
+    public function login(Request $request)
+    {
+        $credentials = $request->only(['email', 'password']);
+        if (!Auth::guard('admin')->attempt($credentials)) {
+            return response()->json(['error' => 'unauthenticated'], 401);
+        }
+        $admin = Auth::guard('admin')->user();
+        $token = $request->user('admin')->createToken('Access Token')->plainTextToken;
+
+        return response()->json(['success' => true, 'access_token' => $token, 'admin' => $admin]);
+    }
+
     public function colors()
     {
-        $colors = Color::all();
+        $colors = Color::with('details')->get();
+        foreach ($colors as $color) {
+            $quantity = 0;
+            foreach ($color->details as $detail) {
+                $quantity = $quantity + $detail->quantity;
+            }
+            $color['quantity_export'] = $quantity;
+        }
         return $colors->toJson();
     }
 
@@ -47,13 +67,43 @@ class AdminController extends Controller
     {
         $categories = Category::with('subs')->paginate(8);
 
+        foreach ($categories as $category) {
+            $quantity_export = 0;
+            foreach ($category->subs as $item) {
+                $productsId = [];
+                foreach ($item->products as $product) {
+                    array_push($productsId, $product->id);
+                }
+                $products_sold = OrderDetail::select('product_id', 'quantity')->whereIn('product_id', $productsId)->get();
+                foreach ($products_sold as $product) {
+                    $quantity_export = $quantity_export + $product->quantity;
+                }
+            }
+            $category['quantity_export'] = $quantity_export;
+        }
         return $categories->toJson();
     }
 
     public function subCategories()
     {
-        $categories = SubCategory::with('category')->paginate(8);
+        $categories = SubCategory::with('category', 'products')->paginate(8);
+        $this->getQuantityEx($categories);
         return $categories->toJson();
+    }
+
+    public function getQuantityEx($items) {
+        foreach ($items as $item) {
+            $quantity_export = 0;
+            $productsId = [];
+            foreach ($item->products as $product) {
+                array_push($productsId, $product->id);
+            }
+            $products_sold = OrderDetail::select('product_id', 'quantity')->whereIn('product_id', $productsId)->get();
+            foreach ($products_sold as $product) {
+                $quantity_export = $quantity_export + $product->quantity;
+            }
+            $item['quantity_export'] = $quantity_export;
+        }
     }
 
     public function orders()
@@ -62,6 +112,7 @@ class AdminController extends Controller
         foreach ($orders as $order) {
             foreach ($order->details as $detail) {
                 $detail['product'] = Product::with('images')->where('id', $detail->product_id)->first();
+                $detail->product['color'] = $detail->color->name;
             }
         }
 
@@ -71,20 +122,7 @@ class AdminController extends Controller
     public function producers()
     {
         $producers = Producer::all();
-
-        foreach ($producers as $producer) {
-            $quantity_export = 0;
-            $productsId = [];
-            foreach ($producer->products as $product) {
-                array_push($productsId, $product->id);
-            }
-            $products_sold = OrderDetail::select('product_id', 'quantity')->whereIn('product_id', $productsId)->get();
-            foreach ($products_sold as $product) {
-                $quantity_export = $quantity_export + $product->quantity;
-            }
-            $producer['quantity_export'] = $quantity_export;
-        }
-
+        $this->getQuantityEx($producers);
         return $producers->toJson();
     }
 
@@ -324,27 +362,29 @@ class AdminController extends Controller
 
     public function statistic()
     {
-        $products = Product::all();
-        $colors = Color::all();
         $orders = OrderBuy::all();
-        $producers = Producer::all();
         $users = User::all();
-        $categories = Category::all();
-        $subCategories = SubCategory::all();
+        $products = Product::with('details')->get();
+        $revenue = 0;
+        foreach ($products as $product) {
+            $quantity = 0;
+            foreach ($product->details as $detail) {
+                $quantity = $quantity + $detail->quantity;
+            }
+            $revenue = $revenue + $quantity * ($product->price - $product->price_import);
+        }
 
         return response()->json([
             'product' => $products->count(),
-            'color' => $colors->count(),
-            'producer' => $producers->count(),
             'user' => $users->count(),
             'order' => $orders->count(),
-            'category' => $categories->count() + $subCategories->count()
+            'revenue' => $revenue,
         ]);
     }
 
     public function statisticProduct()
     {
-        $products = Product::with('images', 'details')->paginate(10);
+        $products = Product::with('images', 'details')->paginate(6);
         foreach ($products as $product) {
             $quantity = 0;
             foreach ($product->details as $detail) {

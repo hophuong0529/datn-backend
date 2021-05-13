@@ -87,3 +87,9 @@ Route::post('producer/{id}', [AdminController::class, 'updateProducer']);
 //Statistic
 Route::get('statistic', [AdminController::class, 'statistic']);
 Route::get('statistic/product', [AdminController::class, 'statisticProduct']);
+
+//Admin
+Route::post('admin/login', [AdminController::class, 'login']);
+Route::middleware('auth:sanctum')->get('/admin', function (Request $request) {
+    return $request->user('admin');
+});

@@ -15,4 +15,8 @@ class Color extends Model
         'name',
         'code'
     ];
+
+    public function details() {
+        return $this->hasMany(OrderDetail::class);
+    }
 }
