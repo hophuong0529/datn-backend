@@ -223,7 +223,7 @@ class UserController extends Controller
     public function cart($userId)
     {
         $cart = Cart::with('items')->where('user_id', $userId)->first();
-        if(!$cart) {
+        if (!$cart) {
             return response()->json("Cart is empty.");
         } else {
             $cartItems = CartItem::with('product', 'color')->where('cart_id', $cart->id)->get();
@@ -364,7 +364,7 @@ class UserController extends Controller
             $user = User::find($id)->update([
                 'password' => Hash::make($request->input('newPassword'))
             ]);
-            return response()->json(11111);
+            return response()->json(['message' => 'Thành công!', 'user' => $user]);
         } else {
             return response()->json(['error' => 'Sai mật khẩu!'], 401);
         }
