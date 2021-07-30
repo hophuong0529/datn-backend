@@ -37,7 +37,7 @@ class UserController extends Controller
 
     public function allProduct()
     {
-        $products = Product::with('images', 'colors', 'sub', 'producer')->paginate(12);
+        $products = Product::with('images', 'colors', 'sub', 'producer')->where('quantity', '>', 0)->paginate(12);
         foreach ($products as $product) {
             foreach ($product->colors as $color) {
                 $color['quantity'] = ProductColor::where([
@@ -51,19 +51,19 @@ class UserController extends Controller
 
     public function productLatest()
     {
-        $products = Product::with('images', 'colors')->orderBy('created_at', 'desc')->limit(8)->get();
+        $products = Product::with('images', 'colors')->where('quantity', '>', 0)->orderBy('created_at', 'desc')->limit(8)->get();
         return $products->toJson();
     }
 
     public function productSale()
     {
-        $products = Product::with('images', 'colors')->where('discount', '!=', 0)->orderBy('discount', 'desc')->limit(8)->get();
+        $products = Product::with('images', 'colors')->where('quantity', '>', 0)->where('discount', '!=', 0)->orderBy('discount', 'desc')->limit(8)->get();
         return $products->toJson();
     }
 
     public function productTop()
     {
-        $products = Product::with('images', 'colors')->where('is_top', 1)->orderBy('created_at', 'desc')->limit(8)->get();
+        $products = Product::with('images', 'colors')->where('quantity', '>', 0)->where('is_top', 1)->orderBy('created_at', 'desc')->limit(8)->get();
         return $products->toJson();
     }
 
@@ -132,6 +132,7 @@ class UserController extends Controller
     public function search($keyword)
     {
         $products = Product::with('images', 'colors')
+            ->where('quantity', '>', 0)
             ->where('name', 'like', '%' . $keyword . '%')
             ->orWhere('code', 'like', '%' . $keyword . '%')
             ->paginate(12);
@@ -147,7 +148,7 @@ class UserController extends Controller
     {
         $category = Category::with('subs')->find($id);
         $sub_categories = Category::with('subs')->find($id)->subs;
-        $products = Product::with('images', 'colors')->whereIn('subcategory_id', $sub_categories->pluck('id'))->paginate(12);
+        $products = Product::with('images', 'colors')->where('quantity', '>', 0)->whereIn('subcategory_id', $sub_categories->pluck('id'))->paginate(12);
         return response()->json([
             'category' => $category,
             'subs' => $sub_categories,
@@ -160,7 +161,7 @@ class UserController extends Controller
         $sub_category = SubCategory::find($id);
         $category_id = SubCategory::find($id)->category_id;
         $related = Category::find($category_id)->subs;
-        $products = Product::with('images', 'colors')->where('subcategory_id', $id)->paginate(12);
+        $products = Product::with('images', 'colors')->where('quantity', '>', 0)->where('subcategory_id', $id)->paginate(12);
         return response()->json([
             'sub_category' => $sub_category,
             'related' => $related,
