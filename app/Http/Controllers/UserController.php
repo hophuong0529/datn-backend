@@ -232,7 +232,11 @@ class UserController extends Controller
             foreach ($cartItems as $item) {
                 $product = $item->product;
                 $product['color'] = $item->color->name;
-                $product['quantity'] = $item->quantity;
+                $product['max_color_quantity'] = ProductColor::where([
+                    'product_id' => $item->product->id,
+                    'color_id' => $item->color->id
+                ])->first()->quantity;
+                $product['cart_quantity'] = $item->quantity;
                 $product['images'] = $product->images;
                 $totalCart += $item->total_item;
             }
