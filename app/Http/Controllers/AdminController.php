@@ -16,6 +16,8 @@ use App\Repositories\Product\ProductRepository;
 use App\Models\ProductImage;
 use App\Models\Color;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
@@ -91,7 +93,8 @@ class AdminController extends Controller
         return $categories->toJson();
     }
 
-    public function getQuantityEx($items) {
+    public function getQuantityEx($items)
+    {
         foreach ($items as $item) {
             $quantity_export = 0;
             $productsId = [];
@@ -130,55 +133,27 @@ class AdminController extends Controller
     {
         //Insert Product color
         $data = $request->all();
-        $data['quantity'] = 0;
-        $product = $this->repository->create($data);
-
-        //Insert ProductColor table
-        $colors = json_decode($request->colors);
-        $product_quantity = 0;
-        foreach ($colors as $color) {
-            ProductColor::insert([
-                'product_id' => $product->id,
-                'color_id' => $color->id,
-                'quantity' => $color->quantity,
-            ]);
-            $product_quantity = $product_quantity + $color->quantity;
-        }
-
-        //Update quantity
-        Product::find($product->id)->update([
-            'quantity' => $product_quantity
+        $validator = Validator::make($data, [
+            'name' => 'unique:product',
+            'code' => 'unique:product'
+        ], [
+            'name.unique' => '* Tên sản phẩm đã tồn tại',
+            'code.unique' => '* Mã code đã tồn tại'
         ]);
-
-        //Insert ProductImage table
-        $images = $request->images;
-        foreach ($images as $image) {
-            $path = time() . '-' . $image->getClientOriginalName();
-            ProductImage::insert([
-                'path' => 'images/' . $path,
-                'product_id' => $product->id,
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->messages()
             ]);
-            $image->storeAs('public/images', $path);
-        }
+        } else {
+            $data['quantity'] = 0;
+            $product = $this->repository->create($data);
 
-        return response()->json($product);
-    }
-
-    public function updateProduct($id, Request $request)
-    {
-        //Update ProductColor table
-        $data = $request->all();
-
-        $product = $this->repository->edit($data, $id);
-
-        //Insert ProductColor table
-        $colors = json_decode($request->colors);
-        $product_quantity = 0;
-        if ($colors) {
-            ProductColor::where('product_id', $id)->delete();
+            //Insert ProductColor table
+            $colors = json_decode($request->colors);
+            $product_quantity = 0;
             foreach ($colors as $color) {
                 ProductColor::insert([
-                    'product_id' => $id,
+                    'product_id' => $product->id,
                     'color_id' => $color->id,
                     'quantity' => $color->quantity,
                 ]);
@@ -186,38 +161,91 @@ class AdminController extends Controller
             }
 
             //Update quantity
-            Product::find($id)->update([
+            Product::find($product->id)->update([
                 'quantity' => $product_quantity
             ]);
 
             //Insert ProductImage table
             $images = $request->images;
-            $preImages = json_decode($request->preImages);
-            if ($images || $preImages) {
-                ProductImage::where('product_id', $id)->delete();
-                if ($images) {
-                    foreach ($images as $image) {
-                        $path = time() . '-' . $image->getClientOriginalName();
-                        ProductImage::insert([
-                            'product_id' => $id,
-                            'path' => 'images/' . $path
-                        ]);
+            foreach ($images as $image) {
+                $path = time() . '-' . $image->getClientOriginalName();
+                ProductImage::insert([
+                    'path' => 'images/' . $path,
+                    'product_id' => $product->id,
+                ]);
+                $image->storeAs('public/images', $path);
+            }
 
-                        $image->storeAs('public/images', $path);
-                    }
+            return response()->json($product);
+        }
+    }
+
+    public function updateProduct($id, Request $request)
+    {
+        //Update ProductColor table
+        $data = $request->all();
+        $validator = Validator::make($data, [
+            'name' => Rule::unique('product')->ignore($id),
+            'code' => Rule::unique('product')->ignore($id),
+        ], [
+            'name.unique' => '* Tên sản phẩm đã tồn tại',
+            'code.unique' => '* Mã code đã tồn tại'
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'errors' => $validator->messages()
+            ]);
+        } else {
+            $product = $this->repository->edit($data, $id);
+
+            //Insert ProductColor table
+            $colors = json_decode($request->colors);
+            $product_quantity = 0;
+            if ($colors) {
+                ProductColor::where('product_id', $id)->delete();
+                foreach ($colors as $color) {
+                    ProductColor::insert([
+                        'product_id' => $id,
+                        'color_id' => $color->id,
+                        'quantity' => $color->quantity,
+                    ]);
+                    $product_quantity = $product_quantity + $color->quantity;
                 }
-                if ($preImages) {
-                    foreach ($preImages as $image) {
-                        ProductImage::insert([
-                            'product_id' => $id,
-                            'path' => $image->path
-                        ]);
+
+                //Update quantity
+                Product::find($id)->update([
+                    'quantity' => $product_quantity
+                ]);
+
+                //Insert ProductImage table
+                $images = $request->images;
+                $preImages = json_decode($request->preImages);
+                if ($images || $preImages) {
+                    ProductImage::where('product_id', $id)->delete();
+                    if ($images) {
+                        foreach ($images as $image) {
+                            $path = time() . '-' . $image->getClientOriginalName();
+                            ProductImage::insert([
+                                'product_id' => $id,
+                                'path' => 'images/' . $path
+                            ]);
+
+                            $image->storeAs('public/images', $path);
+                        }
+                    }
+                    if ($preImages) {
+                        foreach ($preImages as $image) {
+                            ProductImage::insert([
+                                'product_id' => $id,
+                                'path' => $image->path
+                            ]);
+                        }
                     }
                 }
             }
-        }
 
-        return response()->json($product);
+            return response()->json($product);
+        }
     }
 
     public function deleteProduct(Request $request)
