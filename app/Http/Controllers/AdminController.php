@@ -167,13 +167,15 @@ class AdminController extends Controller
 
             //Insert ProductImage table
             $images = $request->images;
-            foreach ($images as $image) {
-                $path = time() . '-' . $image->getClientOriginalName();
-                ProductImage::insert([
-                    'path' => 'images/' . $path,
-                    'product_id' => $product->id,
-                ]);
-                $image->storeAs('public/images', $path);
+            if ($images) {
+                foreach ($images as $image) {
+                    $path = time() . '-' . $image->getClientOriginalName();
+                    ProductImage::insert([
+                        'path' => 'images/' . $path,
+                        'product_id' => $product->id,
+                    ]);
+                    $image->storeAs('public/images', $path);
+                }
             }
 
             return response()->json($product);

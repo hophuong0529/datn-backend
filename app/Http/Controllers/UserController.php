@@ -37,7 +37,7 @@ class UserController extends Controller
 
     public function allProduct()
     {
-        $products = Product::with('images', 'colors', 'sub', 'producer')->where('quantity', '>', 0)->orderBy('name')->paginate(12);
+        $products = Product::with('images', 'colors', 'sub', 'producer')->where('quantity', '>', 0)->orderBy('created_at')->paginate(12);
         foreach ($products as $product) {
             foreach ($product->colors as $color) {
                 $color['quantity'] = ProductColor::where([
