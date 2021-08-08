@@ -129,6 +129,20 @@ class AdminController extends Controller
         return $producers->toJson();
     }
 
+    public function products()
+    {
+        $products = Product::with('images', 'colors', 'sub', 'producer')->orderBy('created_at', 'desc')->paginate(12);
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
+        return $products->toJson();
+    }
+
     public function storeProduct(Request $request)
     {
         //Insert Product color
@@ -253,11 +267,14 @@ class AdminController extends Controller
     public function deleteProduct(Request $request)
     {
         $id = $request->productId;
+        $detail = OrderDetail::where('product_id', $id)->first();
+        if ($detail) {
+            return response()->json("Delete failed.", 403);
+        }
         $this->repository->delete($id);
         ProductImage::where('product_id', $id)->delete();
         ProductColor::where('product_id', $id)->delete();
-
-        return response()->json("Delete Success.");
+        return response()->json("Delete success.");
     }
 
     public function storeCategory(Request $request)
@@ -281,8 +298,17 @@ class AdminController extends Controller
     public function deleteCategory(Request $request)
     {
         $id = $request->input('categoryId');
+        $subs = SubCategory::where('category_id', $id)->get();
+        $count_prd = 0;
+        foreach ($subs as $sub) {
+            $products = Product::where('subcategory_id', $sub->id)->get();
+            $count_prd += count($products);
+        }
+        if ($count_prd != 0) {
+            return response()->json("Delete failed.", 403);
+        }
         Category::find($id)->delete();
-
+        SubCategory::where('category_id', $id)->delete();
         return response()->json("Delete Success.");
     }
 
@@ -309,8 +335,11 @@ class AdminController extends Controller
     public function deleteSubCategory(Request $request)
     {
         $id = $request->input('categoryId');
+        $product = Product::where('subcategory_id', $id)->first();
+        if ($product) {
+            return response()->json("Delete failed.", 403);
+        }
         SubCategory::find($id)->delete();
-
         return response()->json("Delete Success.");
     }
 
@@ -339,16 +368,29 @@ class AdminController extends Controller
     public function deleteProducer(Request $request)
     {
         $id = $request->input('producerId');
+        $product = Product::where('producer_id', $id)->first();
+        if ($product) {
+            return response()->json("Delete failed.", 403);
+        }
         Producer::find($id)->delete();
-
         return response()->json("Delete Success.");
     }
 
     public function updateOrder($id, Request $request)
     {
-        OrderBuy::find($id)->update([
-            'status_id' => $request->input('statusId'),
+        $status_id = $request->input('statusId');
+        $order = OrderBuy::with('details')->where('id', $id)->first();
+        $order->update([
+            'status_id' => $status_id,
         ]);
+        if ($status_id == 12) {
+            foreach ($order->details as $detail) {
+                $product = Product::find($detail->product_id);
+                $product->update([
+                    'quantity' => ($product->quantity + $detail->quantity)
+                ]);
+            }
+        }
 
         return $this->orders();
     }
@@ -385,8 +427,11 @@ class AdminController extends Controller
     public function deleteColor(Request $request)
     {
         $id = $request->input('colorId');
+        $detail = OrderDetail::where('color_id', $id)->first();
+        if ($detail) {
+            return response()->json("Delete failed.", 403);
+        }
         Color::find($id)->delete();
-
         return response()->json("Delete Success.");
     }
 

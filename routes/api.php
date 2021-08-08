@@ -29,7 +29,8 @@ Route::post('profile/change-password/{id}', [UserController::class, 'changePassw
 Route::get('latest-product', [UserController::class, 'productLatest']);
 Route::get('top-product', [UserController::class, 'productTop']);
 Route::get('sale-product', [UserController::class, 'productSale']);
-Route::get('products', [UserController::class, 'allProduct']);
+Route::get('all-product', [UserController::class, 'allProduct']);
+Route::get('products', [AdminController::class, 'products']);
 Route::post('products', [AdminController::class, 'storeProduct']);
 Route::post('product/delete', [AdminController::class, 'deleteProduct']);
 Route::get('product/{slug}', [UserController::class, 'detailProduct']);

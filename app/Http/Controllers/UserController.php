@@ -37,7 +37,7 @@ class UserController extends Controller
 
     public function allProduct()
     {
-        $products = Product::with('images', 'colors', 'sub', 'producer')->where('quantity', '>', 0)->orderBy('created_at')->paginate(12);
+        $products = Product::with('images', 'colors', 'sub', 'producer')->where('quantity', '>', 0)->orderBy('name')->paginate(12);
         foreach ($products as $product) {
             foreach ($product->colors as $color) {
                 $color['quantity'] = ProductColor::where([
@@ -52,18 +52,42 @@ class UserController extends Controller
     public function productLatest()
     {
         $products = Product::with('images', 'colors')->where('quantity', '>', 0)->orderBy('created_at', 'desc')->limit(8)->get();
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return $products->toJson();
     }
 
     public function productSale()
     {
         $products = Product::with('images', 'colors')->where('quantity', '>', 0)->where('discount', '!=', 0)->orderBy('discount', 'desc')->limit(8)->get();
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return $products->toJson();
     }
 
     public function productTop()
     {
         $products = Product::with('images', 'colors')->where('quantity', '>', 0)->where('is_top', 1)->orderBy('created_at', 'desc')->limit(8)->get();
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return $products->toJson();
     }
 
@@ -272,7 +296,7 @@ class UserController extends Controller
             ['color_id', '=', $colorId]
         ])->first()->id;
         $cartItem = CartItem::find($cartItemId);
-        CartItem::find($cartItemId)->update([
+        $cartItem->update([
             'quantity' => $new_quantity,
             'total_item' => $cartItem->price_sale * $new_quantity
         ]);
@@ -283,12 +307,15 @@ class UserController extends Controller
     public function storeOrder(Request $request)
     {
         $codeOrder = rand(10000000, 99999999);
+        $totalCart = $request->input('totalCart');
+        $shipping_fee = $totalCart < 500000 ? 35000 : 0;
         //Thêm vào OrderBuy
         OrderBuy::insert([
             'code' => $codeOrder,
             'user_id' => $request->input('userId'),
             'method_id' => $request->input('methodId'),
-            'total_bill' => $request->input('totalCart') + 35000
+            'shipping_fee' => $shipping_fee,
+            'total_bill' => $totalCart + $shipping_fee
         ]);
 
         //Thêm vào Receiver
@@ -308,10 +335,10 @@ class UserController extends Controller
                 'order_id' => $order->id,
                 'product_id' => $item['id'],
                 'color_id' => Color::where('name', $item['color'])->first()->id,
-                'quantity' => $item['quantity'],
+                'quantity' => $item['cart_quantity'],
                 'price' => $item['price'],
                 'price_sale' => $item['price'] * (100 - $item['discount']) / 100,
-                'total_item' => ($item['price'] * (100 - $item['discount']) / 100) * $item['quantity']
+                'total_item' => ($item['price'] * (100 - $item['discount']) / 100) * $item['cart_quantity']
             ]);
 
             //Update quantity ProductColor
@@ -321,14 +348,14 @@ class UserController extends Controller
             ])->first()->id;
 
             $productColor = ProductColor::find($productColorId);
-            ProductColor::find($productColorId)->update([
-                'quantity' => ($productColor->quantity - $item['quantity'])
+            $productColor->update([
+                'quantity' => ($productColor->quantity - $item['cart_quantity'])
             ]);
 
             //Update quantity Product
             $product = Product::find($item['id']);
-            Product::find($item['id'])->update([
-                'quantity' => ($product->quantity - $item['quantity'])
+            $product->update([
+                'quantity' => ($product->quantity - $item['cart_quantity'])
             ]);
         }
 
@@ -364,9 +391,9 @@ class UserController extends Controller
 
     public function changePassword($id, Request $request)
     {
-        $user = User::find($id)->first();
+        $user = User::find($id);
         if (Hash::check($request->input('oldPassword'), $user->password)) {
-            $user = User::find($id)->update([
+            $user->update([
                 'password' => Hash::make($request->input('newPassword'))
             ]);
             return response()->json(['message' => 'Thành công!', 'user' => $user]);
