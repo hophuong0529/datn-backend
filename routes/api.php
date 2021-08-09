@@ -37,6 +37,7 @@ Route::get('product/{slug}', [UserController::class, 'detailProduct']);
 Route::post('product/{id}', [AdminController::class, 'updateProduct']);
 Route::get('related-product/{name}', [UserController::class, 'productRelated']);
 Route::get('search/{keyword}', [UserController::class, 'search']);
+Route::get('products/search/{keyword}', [AdminController::class, 'searchProduct']);
 
 //Category
 Route::get('categories', [AdminController::class, 'categories']);

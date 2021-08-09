@@ -159,6 +159,7 @@ class UserController extends Controller
             ->where('quantity', '>', 0)
             ->where('name', 'like', '%' . $keyword . '%')
             ->orWhere('code', 'like', '%' . $keyword . '%')
+            ->orderBy('name')
             ->paginate(12);
         foreach ($products as $product) {
             foreach ($product->colors as $color) {

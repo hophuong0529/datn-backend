@@ -470,4 +470,18 @@ class AdminController extends Controller
         }
         return $products->toJson();
     }
+
+    public function searchProduct($keyword)
+    {
+        $products = Product::with('images', 'colors')
+            ->where('name', 'like', '%' . $keyword . '%')
+            ->orWhere('code', 'like', '%' . $keyword . '%')
+            ->orderBy('created_at', 'desc')
+            ->paginate(12);
+        return response()->json([
+                'products' => $products,
+                'keyword' => $keyword
+            ]
+        );
+    }
 }
