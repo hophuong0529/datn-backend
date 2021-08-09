@@ -160,7 +160,14 @@ class UserController extends Controller
             ->where('name', 'like', '%' . $keyword . '%')
             ->orWhere('code', 'like', '%' . $keyword . '%')
             ->paginate(12);
-
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return response()->json([
                 'products' => $products,
                 'keyword' => $keyword
@@ -173,6 +180,14 @@ class UserController extends Controller
         $category = Category::with('subs')->find($id);
         $sub_categories = Category::with('subs')->find($id)->subs;
         $products = Product::with('images', 'colors')->where('quantity', '>', 0)->whereIn('subcategory_id', $sub_categories->pluck('id'))->orderBy('name')->paginate(12);
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return response()->json([
             'category' => $category,
             'subs' => $sub_categories,
@@ -186,6 +201,14 @@ class UserController extends Controller
         $category_id = SubCategory::find($id)->category_id;
         $related = Category::find($category_id)->subs;
         $products = Product::with('images', 'colors')->where('quantity', '>', 0)->where('subcategory_id', $id)->orderBy('name')->paginate(12);
+        foreach ($products as $product) {
+            foreach ($product->colors as $color) {
+                $color['quantity'] = ProductColor::where([
+                    'product_id' => $product->id,
+                    'color_id' => $color->id
+                ])->first()->quantity;
+            }
+        }
         return response()->json([
             'sub_category' => $sub_category,
             'related' => $related,
