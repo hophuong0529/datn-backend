@@ -111,7 +111,8 @@ class AdminController extends Controller
 
     public function orders()
     {
-        $orders = OrderBuy::with('receiver', 'status', 'user', 'method')->get();
+        $orders = OrderBuy::with('receiver', 'status', 'user', 'method')
+            ->orderByRaw('status_id ASC, created_at DESC')->paginate(10);
         foreach ($orders as $order) {
             foreach ($order->details as $detail) {
                 $detail['product'] = Product::with('images')->where('id', $detail->product_id)->first();
@@ -131,7 +132,7 @@ class AdminController extends Controller
 
     public function products()
     {
-        $products = Product::with('images', 'colors', 'sub', 'producer')->orderBy('created_at', 'desc')->paginate(12);
+        $products = Product::with('images', 'colors', 'sub', 'producer')->orderBy('created_at', 'desc')->paginate(10);
         foreach ($products as $product) {
             foreach ($product->colors as $color) {
                 $color['quantity'] = ProductColor::where([

@@ -392,7 +392,7 @@ class UserController extends Controller
 
     public function ordersUser($userId)
     {
-        $orders = OrderBuy::with('receiver', 'details')->where('user_id', $userId)->get();
+        $orders = OrderBuy::with('receiver', 'details')->where('user_id', $userId)->orderBy('created_at', 'desc')->get();
         foreach ($orders as $order) {
             $order['method'] = OrderMethod::where('id', $order->method_id)->first()->name;
             $order['status'] = OrderStatus::where('id', $order->status_id)->first()->status;
